@@ -16,19 +16,49 @@ def serve_static(filename):
 
 @app.route('/api/orders', methods=['POST'])
 def add_order_api():
-    pass
+    data = request.get_json()
+    try:
+        order_tracker.add_order(
+            order_id=data['order_id'],
+            item_name=data['item_name'],
+            quantity=data['quantity'],
+            customer_id=data['customer_id'],
+            status=data.get('status', 'pending')
+        )
+        order = order_tracker.get_order_by_id(data['order_id'])
+        return jsonify(order), 201
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
 
 @app.route('/api/orders/<string:order_id>', methods=['GET'])
 def get_order_api(order_id):
-    pass
+    order = order_tracker.get_order_by_id(order_id)
+    if order is None:
+        return jsonify({'error': 'Order not found'}), 404
+    return jsonify(order), 200
 
 @app.route('/api/orders/<string:order_id>/status', methods=['PUT'])
 def update_order_status_api(order_id):
-    pass
+    data = request.get_json()
+    try:
+        order_tracker.update_order_status(order_id, data['new_status'])
+        order = order_tracker.get_order_by_id(order_id)
+        return jsonify(order), 200
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 404
 
 @app.route('/api/orders', methods=['GET'])
 def list_orders_api():
-    pass
+    status = request.args.get('status')
+    if status:
+        orders = order_tracker.list_orders_by_status(status)
+        # Convert dict to list of orders
+        orders_list = list(orders.values())
+    else:
+        all_orders = order_tracker.list_all_orders()
+        # Convert dict to list of orders
+        orders_list = list(all_orders.values())
+    return jsonify(orders_list), 200
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0", debug=True)
